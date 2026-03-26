@@ -967,29 +967,27 @@ function renderSlots() {
     html += '<div class="rental-section">';
     html += '<div class="rental-title">レンタル品</div>';
     html += '<div class="rental-item">';
-    html += '<input type="checkbox" id="rental_bib' + i + '" onchange="calcTotal()">';
-    html += '<span class="rental-label">ビブス1セット(10枚)</span>';
-    html += '<span class="rental-price">\u00a51,000</span></div>';
+    html += '<span class="rental-label">ビブス1セット10枚(\u00a51,000)</span>';
+    html += '<select id="rental_bib' + i + '" onchange="calcTotal()" style="width:70px;">';
+    for (let bn = 0; bn <= 10; bn++) {
+      html += '<option value="' + bn + '">' + bn + 'セット</option>';
+    }
+    html += '</select></div>';
     html += '<div class="rental-item">';
-    html += '<span class="rental-label">ボール(1球\u00a5500)</span>';
+    html += '<span class="rental-label">ボール1球(\u00a5500)</span>';
     html += '<select id="rental_ball' + i + '" onchange="calcTotal()" style="width:70px;">';
-    html += '<option value="0">0個</option>';
-    for (let bn = 1; bn <= 10; bn++) {
+    for (let bn = 0; bn <= 10; bn++) {
       html += '<option value="' + bn + '">' + bn + '個</option>';
     }
     html += '</select></div>';
     html += '<div class="rental-item">';
-    html += '<input type="checkbox" id="rental_shoes' + i + '" onchange="toggleShoeSize(' + i + '); calcTotal()">';
-    html += '<span class="rental-label">バスケットシューズ1足</span>';
-    html += '<span class="rental-price">\u00a51,500</span></div>';
-    html += '<div class="rental-item" id="shoeSize' + i + '" style="display:none; padding-left:30px;">';
-    html += '<label style="font-size:12px;color:#666;">サイズ:</label>';
-    html += '<select id="rental_shoes_size' + i + '">';
-    html += '<option value="">選択</option>';
-    for (let s = 26.0; s <= 29.0; s += 0.5) {
-      html += '<option value="' + s.toFixed(1) + '">' + s.toFixed(1) + 'cm</option>';
+    html += '<span class="rental-label">バスケットシューズ1足(\u00a51,500)</span>';
+    html += '<select id="rental_shoes' + i + '" onchange="updateShoeSizes(' + i + '); calcTotal()" style="width:70px;">';
+    for (let sn = 0; sn <= 10; sn++) {
+      html += '<option value="' + sn + '">' + sn + '足</option>';
     }
     html += '</select></div>';
+    html += '<div id="shoeSizes' + i + '"></div>';
     html += '<div class="rental-subtotal"><span>レンタル小計</span><span id="rentalSubtotal' + i + '">-</span></div>';
     html += '</div>';
     html += '<div class="slot-subtotal">';
@@ -1018,39 +1016,60 @@ function applyCopy(n) {
   });
 }
 
-function toggleShoeSize(i) {
-  const cb = document.getElementById('rental_shoes' + i);
-  const el = document.getElementById('shoeSize' + i);
-  el.style.display = cb.checked ? 'flex' : 'none';
+function updateShoeSizes(slotIdx) {
+  var count = parseInt(document.getElementById('rental_shoes' + slotIdx).value) || 0;
+  var container = document.getElementById('shoeSizes' + slotIdx);
+  var html = '';
+  for (var n = 1; n <= count; n++) {
+    html += '<div class="rental-item" style="padding-left:30px;">';
+    html += '<label style="font-size:12px;color:#666;">' + n + '足目サイズ:</label>';
+    html += '<select id="rental_shoes_size' + slotIdx + '_' + n + '">';
+    html += '<option value="">選択</option>';
+    for (var s = 26.0; s <= 29.0; s += 0.5) {
+      html += '<option value="' + s.toFixed(1) + '">' + s.toFixed(1) + 'cm</option>';
+    }
+    html += '</select></div>';
+  }
+  container.innerHTML = html;
 }
 
 function getRentalTotal(i) {
-  let total = 0;
-  if (document.getElementById('rental_bib' + i).checked) total += 1000;
+  var bibCount = parseInt(document.getElementById('rental_bib' + i).value) || 0;
   var ballCount = parseInt(document.getElementById('rental_ball' + i).value) || 0;
-  total += ballCount * 500;
-  if (document.getElementById('rental_shoes' + i).checked) total += 1500;
-  return total;
+  var shoesCount = parseInt(document.getElementById('rental_shoes' + i).value) || 0;
+  return bibCount * 1000 + ballCount * 500 + shoesCount * 1500;
 }
 
 function getRentalLabels(i) {
   var items = [];
-  if (document.getElementById('rental_bib' + i).checked) items.push('ビブス(\u00a51,000)');
+  var bibCount = parseInt(document.getElementById('rental_bib' + i).value) || 0;
+  if (bibCount > 0) items.push('ビブス' + bibCount + 'セット(\u00a5' + (bibCount * 1000).toLocaleString() + ')');
   var ballCount = parseInt(document.getElementById('rental_ball' + i).value) || 0;
   if (ballCount > 0) items.push('ボール' + ballCount + '球(\u00a5' + (ballCount * 500).toLocaleString() + ')');
-  if (document.getElementById('rental_shoes' + i).checked) {
-    var size = document.getElementById('rental_shoes_size' + i).value;
-    items.push('シューズ' + (size ? size + 'cm' : '') + '(\u00a51,500)');
+  var shoesCount = parseInt(document.getElementById('rental_shoes' + i).value) || 0;
+  if (shoesCount > 0) {
+    var sizes = [];
+    for (var n = 1; n <= shoesCount; n++) {
+      var el = document.getElementById('rental_shoes_size' + i + '_' + n);
+      if (el && el.value) sizes.push(el.value + 'cm');
+    }
+    items.push('シューズ' + shoesCount + '足' + (sizes.length ? '(' + sizes.join(',') + ')' : '') + ' \u00a5' + (shoesCount * 1500).toLocaleString());
   }
   return items;
 }
 
 function getRentalData(i) {
+  var shoesCount = parseInt(document.getElementById('rental_shoes' + i).value) || 0;
+  var shoesSizes = [];
+  for (var n = 1; n <= shoesCount; n++) {
+    var el = document.getElementById('rental_shoes_size' + i + '_' + n);
+    if (el && el.value) shoesSizes.push(el.value);
+  }
   return {
-    bib: document.getElementById('rental_bib' + i).checked,
+    bibCount: parseInt(document.getElementById('rental_bib' + i).value) || 0,
     ballCount: parseInt(document.getElementById('rental_ball' + i).value) || 0,
-    shoes: document.getElementById('rental_shoes' + i).checked,
-    shoesSize: document.getElementById('rental_shoes' + i).checked ? document.getElementById('rental_shoes_size' + i).value : '',
+    shoesCount: shoesCount,
+    shoesSizes: shoesSizes,
     rentalTotal: getRentalTotal(i),
     rentalLabels: getRentalLabels(i),
   };

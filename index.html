@@ -206,14 +206,36 @@
     background: #fff;
     -webkit-appearance: none;
   }
-  .rental-subtotal {
+  .slot-summary {
+    border-top: 2px solid #e0e0e0;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  .slot-summary .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 14px;
+    color: #555;
+  }
+  .slot-summary .summary-row.rental { color: #e67e22; }
+  .slot-summary .summary-row.discount { color: #d32f2f; }
+  .slot-summary .rental-detail {
+    font-size: 11px;
+    color: #999;
+    padding: 0 0 4px 8px;
+  }
+  .slot-summary .summary-total {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 8px 0 0;
-    font-size: 14px;
-    font-weight: 700;
-    color: #e67e22;
+    margin-top: 4px;
+    border-top: 2px solid #1a73e8;
+    font-size: 17px;
+    font-weight: 800;
+    color: #1a73e8;
   }
 
   /* Payment area inside booking */
@@ -988,12 +1010,9 @@ function renderSlots() {
     }
     html += '</select></div>';
     html += '<div id="shoeSizes' + i + '"></div>';
-    html += '<div class="rental-subtotal"><span>レンタル小計</span><span id="rentalSubtotal' + i + '">-</span></div>';
     html += '</div>';
-    html += '<div class="slot-subtotal">';
-    html += '<span class="label">この枠の小計</span>';
-    html += '<span class="value" id="subtotal' + i + '">-</span>';
-    html += '</div></div>';
+    html += '<div id="slotSummary' + i + '"></div>';
+    html += '</div>';
     html += '</div>';
   }
   container.innerHTML = html;
@@ -1077,51 +1096,51 @@ function getRentalData(i) {
 
 function calcTotal() {
   let grandTotal = 0;
-  let rentalGrandTotal = 0;
   let breakdownHtml = '';
 
   for (let i = 1; i <= slotCount; i++) {
     const priceEl = document.getElementById('price' + i);
     const couponEl = document.getElementById('coupon' + i);
-    const subtotalEl = document.getElementById('subtotal' + i);
-    const rentalSubEl = document.getElementById('rentalSubtotal' + i);
+    const summaryEl = document.getElementById('slotSummary' + i);
     if (!priceEl) continue;
 
     const price = parseInt(priceEl.value) || 0;
     const discount = parseInt(couponEl.value) || 0;
     const rental = getRentalTotal(i);
-    const subtotal = price - discount;
+    const slotTotal = price - discount + rental;
 
-    if (subtotalEl) {
-      subtotalEl.textContent = price ? '\u00a5' + subtotal.toLocaleString() : '-';
+    // 枠ごとの内訳表示（案B）
+    var sh = '<div class="slot-summary">';
+    sh += '<div class="summary-row"><span>金額</span><span>\u00a5' + price.toLocaleString() + '</span></div>';
+    if (discount) {
+      sh += '<div class="summary-row discount"><span>クーポン</span><span>-\u00a5' + discount.toLocaleString() + '</span></div>';
     }
-    if (rentalSubEl) {
-      rentalSubEl.textContent = rental ? '\u00a5' + rental.toLocaleString() : '-';
+    if (rental) {
+      sh += '<div class="summary-row rental"><span>レンタル</span><span>+\u00a5' + rental.toLocaleString() + '</span></div>';
+      var labels = getRentalLabels(i);
+      if (labels.length) sh += '<div class="rental-detail">(' + labels.join(' / ') + ')</div>';
     }
+    sh += '<div class="summary-total"><span>この枠の合計</span><span>\u00a5' + slotTotal.toLocaleString() + '</span></div>';
+    sh += '</div>';
+
+    if (summaryEl) summaryEl.innerHTML = price ? sh : '';
 
     if (price) {
       breakdownHtml += '<div class="gt-breakdown">';
-      breakdownHtml += '予約' + i + ': \u00a5' + price.toLocaleString();
-      if (discount) breakdownHtml += ' (-\u00a5' + discount.toLocaleString() + ')';
+      breakdownHtml += '予約' + i + ': \u00a5' + slotTotal.toLocaleString();
       breakdownHtml += '</div>';
-      grandTotal += subtotal;
+      grandTotal += slotTotal;
     }
-    rentalGrandTotal += rental;
   }
 
   const breakdownEl = document.getElementById('totalBreakdown');
   if (breakdownEl) breakdownEl.innerHTML = breakdownHtml;
 
   const rentalBreakdownEl = document.getElementById('rentalBreakdown');
-  if (rentalBreakdownEl) {
-    rentalBreakdownEl.innerHTML = rentalGrandTotal > 0
-      ? '<div class="gt-breakdown" style="color:#f5c542;">レンタル合計: \u00a5' + rentalGrandTotal.toLocaleString() + '</div>'
-      : '';
-  }
+  if (rentalBreakdownEl) rentalBreakdownEl.innerHTML = '';
 
-  const total = grandTotal + rentalGrandTotal;
   const grandTotalEl = document.getElementById('dispGrandTotal');
-  if (grandTotalEl) grandTotalEl.textContent = total ? '\u00a5' + total.toLocaleString() : '-';
+  if (grandTotalEl) grandTotalEl.textContent = grandTotal ? '\u00a5' + grandTotal.toLocaleString() : '-';
 }
 
 // ===== Confirm =====

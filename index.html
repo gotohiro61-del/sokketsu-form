@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>即決予約システム</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    background: #f0f2f5;
+    color: #333;
+    min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+  }
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 12px;
+    padding-bottom: 40px;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: white;
+    padding: 18px 16px;
+    border-radius: 14px;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .header h1 { font-size: 17px; font-weight: 700; }
+  .header .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.25);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  /* Steps indicator */
+  .steps {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .step-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #ddd;
+  }
+  .step-dot.active { background: #1a73e8; width: 28px; border-radius: 5px; }
+
+  /* Section */
+  .section {
+    background: white;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a73e8;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e8f0fe;
+  }
+
+  /* Info rows */
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 14px;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: #999; font-size: 13px; }
+  .info-value { font-weight: 600; text-align: right; max-width: 60%; }
+
+  /* Form */
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #444;
+    margin-bottom: 6px;
+  }
+  .form-group label .req {
+    color: #d32f2f;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 14px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    background: #fafafa;
+    transition: border-color 0.2s, background 0.2s;
+    -webkit-appearance: none;
+  }
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #1a73e8;
+    background: white;
+  }
+  .form-group input.disabled {
+    background: #f0f0f0;
+    color: #999;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* Booking block */
+  .booking-block {
+    border: 2px solid #e8eaed;
+    border-radius: 14px;
+    padding: 18px 14px 14px;
+    margin-bottom: 12px;
+    position: relative;
+    background: #fafbfc;
+  }
+  .booking-number {
+    position: absolute;
+    top: -11px;
+    left: 14px;
+    background: #1a73e8;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 14px;
+    border-radius: 12px;
+  }
+  .copy-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    background: #e8f0fe;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #1a73e8;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .copy-check input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #1a73e8;
+  }
+
+  /* Payment area inside booking */
+  .slot-payment {
+    border-top: 2px dashed #e0e0e0;
+    margin-top: 14px;
+    padding-top: 14px;
+    background: #fffdf5;
+    margin-left: -14px;
+    margin-right: -14px;
+    margin-bottom: -14px;
+    padding: 14px;
+    border-radius: 0 0 12px 12px;
+  }
+  .slot-payment .form-group input,
+  .slot-payment .form-group select {
+    background: white;
+  }
+  .slot-subtotal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0 0;
+    font-size: 15px;
+  }
+  .slot-subtotal .label { color: #888; }
+  .slot-subtotal .value { font-weight: 800; color: #1a73e8; font-size: 17px; }
+
+  /* Grand total */
+  .grand-total-box {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    border-radius: 14px;
+    padding: 18px;
+    color: white;
+    margin-bottom: 12px;
+  }
+  .grand-total-box .gt-title {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-bottom: 4px;
+  }
+  .grand-total-box .gt-breakdown {
+    font-size: 13px;
+    opacity: 0.9;
+    padding: 4px 0;
+  }
+  .grand-total-box .gt-amount {
+    font-size: 28px;
+    font-weight: 800;
+    text-align: center;
+    padding: 8px 0;
+  }
+
+  /* Buttons */
+  .submit-btn {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.2s;
+    letter-spacing: 1px;
+  }
+  .submit-btn:active { opacity: 0.8; transform: scale(0.98); }
+  .cancel-btn {
+    width: 100%;
+    padding: 14px;
+    background: white;
+    color: #999;
+    border: 2px solid #e0e0e0;
+    border-radius: 14px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .next-btn {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, #4caf50, #2e7d32);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    letter-spacing: 1px;
+  }
+  .next-btn:active { opacity: 0.8; }
+
+  /* Team selection */
+  .tournament-select select {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #fafafa;
+    -webkit-appearance: none;
+  }
+  .team-list { margin-top: 8px; }
+  .team-card {
+    background: white;
+    border: 2px solid #e8eaed;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .team-card:active { background: #f0f4ff; }
+  .team-card.selected {
+    border-color: #1a73e8;
+    background: #e8f0fe;
+    box-shadow: 0 0 0 3px rgba(26,115,232,0.15);
+  }
+  .team-card .team-info { flex: 1; }
+  .team-card .team-name {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .team-card .team-rep {
+    font-size: 13px;
+    color: #666;
+  }
+  .team-card .team-check {
+    width: 30px;
+    height: 30px;
+    border: 2px solid #ccc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: white;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .team-card.selected .team-check {
+    background: #1a73e8;
+    border-color: #1a73e8;
+  }
+
+  /* Type selector */
+  .type-selector {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .type-btn {
+    flex: 1;
+    padding: 12px 4px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    background: white;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .type-btn.selected {
+    border-color: #1a73e8;
+    background: #1a73e8;
+    color: white;
+    box-shadow: 0 2px 8px rgba(26,115,232,0.3);
+  }
+  .type-btn .type-sub {
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.7;
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* Confirm overlay */
+  .overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .overlay.show { display: flex; }
+  .confirm-box {
+    background: white;
+    border-radius: 18px;
+    padding: 24px 20px;
+    max-width: 440px;
+    width: 100%;
+    margin: auto;
+  }
+  .confirm-box h2 {
+    font-size: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+    color: #1a73e8;
+  }
+  .confirm-team {
+    text-align: center;
+    background: #e8f0fe;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .confirm-team .ct-name {
+    font-size: 22px;
+    font-weight: 800;
+    color: #333;
+  }
+  .confirm-team .ct-rep {
+    font-size: 14px;
+    color: #666;
+    margin-top: 4px;
+  }
+  .confirm-booking {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .confirm-booking-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a73e8;
+    margin-bottom: 10px;
+  }
+  .confirm-booking-main {
+    font-size: 20px;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  .confirm-booking-detail {
+    font-size: 15px;
+    color: #555;
+    line-height: 1.8;
+  }
+  .confirm-payment {
+    background: #fff8e1;
+    border: 2px solid #ffc107;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .confirm-payment .pay-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    padding: 4px 0;
+  }
+  .confirm-payment .pay-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 24px;
+    font-weight: 800;
+    color: #1a73e8;
+    border-top: 2px solid #e0c860;
+    margin-top: 8px;
+    padding-top: 10px;
+  }
+  .rep-confirm-box {
+    background: #fff3e0;
+    border: 2px solid #ff9800;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .rep-confirm-box .rep-title {
+    font-size: 13px;
+    color: #e65100;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .rep-confirm-box .rep-name {
+    font-size: 24px;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  .rep-confirm-box .rep-email {
+    font-size: 14px;
+    color: #666;
+    word-break: break-all;
+  }
+  .rep-confirm-box .rep-note {
+    font-size: 11px;
+    color: #999;
+    margin-top: 8px;
+  }
+  .btn-send-rep {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #e65100, #d32f2f);
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 12px;
+    letter-spacing: 1px;
+  }
+  .btn-send-rep:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-send-rep .send-to {
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.9;
+    display: block;
+    margin-top: 4px;
+  }
+
+  /* Complete */
+  .complete-screen {
+    display: none;
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .complete-screen.show { display: block; }
+  .complete-screen .check {
+    width: 90px; height: 90px;
+    background: #4caf50;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    color: white;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(76,175,80,0.3);
+  }
+  .complete-screen h2 { font-size: 22px; margin-bottom: 8px; }
+  .complete-screen p { color: #888; font-size: 14px; margin-bottom: 24px; }
+  .close-btn {
+    padding: 16px 50px;
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #1a73e8;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 12px;
+    padding: 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ===== STEP 1: Team Selection ===== -->
+  <div class="screen active" id="step1">
+    <div class="header">
+      <h1>即決予約システム</h1>
+      <div class="badge">BOOKS</div>
+    </div>
+
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+
+    <div class="steps">
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+
+    <div id="loadError" style="display:none;background:#ffebee;color:#c62828;padding:12px 16px;border-radius:10px;font-size:14px;margin-bottom:12px;"></div>
+
+    <!-- 読み込み中メッセージ -->
+    <div id="initialLoading" style="text-align:center;padding:60px 20px;">
+      <div style="width:50px;height:50px;border:4px solid #e0e0e0;border-top:4px solid #1a73e8;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
+      <div style="font-size:15px;color:#666;font-weight:600;">大会データを読み込み中...</div>
+    </div>
+
+    <!-- データ読み込み後に表示 -->
+    <div id="mainContent" style="display:none;">
+
+    <!-- Staff name -->
+    <div class="section">
+      <div class="section-title">&#128100; 入力者</div>
+      <div class="form-group" style="margin-bottom:0">
+        <input type="text" id="staffName" placeholder="あなたの名前を入力してください">
+      </div>
+    </div>
+
+    <!-- Tournament select -->
+    <div class="section">
+      <div class="section-title">&#128197; 大会を選択 <span style="font-size:11px;font-weight:400;color:#999;margin-left:4px;">本日の大会のみ表示</span></div>
+      <div class="tournament-select">
+        <select id="tournamentSelect" onchange="loadTeams()">
+        </select>
+      </div>
+    </div>
+
+    <!-- Team list -->
+    <div class="section">
+      <div class="section-title">🏀 チームを選択</div>
+      <div class="team-list" id="teamList"></div>
+    </div>
+
+    <!-- Type selector -->
+    <div class="section" id="typeSection" style="display:none">
+      <div class="section-title">&#9889; 何枠の即決？</div>
+      <div class="type-selector" id="typeSelector">
+        <div class="type-btn selected" onclick="selectType(1)">1枠</div>
+        <div class="type-btn" onclick="selectType(2)">2枠</div>
+        <div class="type-btn" onclick="selectType(3)">3枠</div>
+        <div class="type-btn" onclick="selectType(4)">4枠</div>
+        <div class="type-btn" onclick="selectType(5)">5枠</div>
+      </div>
+    </div>
+
+    <button class="next-btn" id="nextBtn" style="display:none" onclick="goToForm()">入力画面へ進む</button>
+    </div><!-- /mainContent -->
+  </div>
+
+  <!-- ===== STEP 2: Input Form ===== -->
+  <div class="screen" id="step2">
+    <div class="back-link" onclick="goBack()">&#8592; 戻る</div>
+
+    <div class="header">
+      <h1>即決予約 入力フォーム</h1>
+      <div class="badge" id="typeBadge">1枠</div>
+    </div>
+
+    <div class="steps">
+      <div class="step-dot"></div>
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+    </div>
+
+    <!-- Today's tournament info -->
+    <div class="section">
+      <div class="section-title">&#9917; 今回の大会</div>
+      <div class="info-row">
+        <span class="info-label">チーム名</span>
+        <span class="info-value" id="dispTeam">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">代表者</span>
+        <span class="info-value" id="dispRep">-</span>
+      </div>
+      <div class="form-group" style="margin-bottom:0;padding:10px 0;border-bottom:1px solid #f5f5f5;">
+        <label style="font-size:13px;color:#999;font-weight:400;">メールアドレス <span class="req">必須</span></label>
+        <input type="email" id="inputEmail" placeholder="例: sample@example.com" style="font-size:14px;padding:10px 12px;" inputmode="email" autocomplete="email">
+        <div id="emailNote" style="font-size:11px;color:#999;margin-top:4px;"></div>
+      </div>
+      <div class="info-row">
+        <span class="info-label">大会</span>
+        <span class="info-value" id="dispTournament" style="font-size:12px">-</span>
+      </div>
+    </div>
+
+    <!-- Booking slots -->
+    <div class="section">
+      <div class="section-title">&#128197; 次回予約を入力</div>
+      <div id="bookingSlots"></div>
+    </div>
+
+    <!-- Total -->
+    <div class="grand-total-box" id="totalSection">
+      <div class="gt-title">お支払い合計</div>
+      <div id="totalBreakdown"></div>
+      <div class="gt-amount" id="dispGrandTotal">-</div>
+    </div>
+
+    <!-- 備考欄 -->
+    <div class="section">
+      <div class="section-title">📝 備考 <span style="font-size:11px;font-weight:400;color:#999;margin-left:4px;">任意・メールには記載されません</span></div>
+      <div class="form-group" style="margin-bottom:0">
+        <textarea id="remarks" rows="3" placeholder="例：メアド変更 xxx@xxx.com&#10;　　代表者変更 山田→鈴木&#10;　　電話番号変更 090-xxxx-xxxx" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:10px;font-size:15px;resize:vertical;font-family:inherit;"></textarea>
+      </div>
+    </div>
+
+    <button class="submit-btn" onclick="showConfirm()">確認画面へ</button>
+    <button class="cancel-btn" onclick="goBack()">キャンセル</button>
+  </div>
+
+  <!-- ===== STEP 3: Complete ===== -->
+  <div class="screen" id="step3">
+    <div class="steps">
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot active"></div>
+    </div>
+    <div class="complete-screen show">
+      <div class="check">&#10003;</div>
+      <h2>送信完了</h2>
+      <p>Chatworkタスク作成 + 確認メール送信が<br>完了しました</p>
+      <div id="completeWarnings"></div>
+      <p id="completeSummary" style="color:#333;font-size:13px;background:#f0f0f0;padding:12px;border-radius:10px;margin-bottom:16px;"></p>
+      <button class="close-btn" onclick="location.reload()">トップに戻る</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Confirm overlay -->
+<div class="overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h2>この内容で送信しますか？</h2>
+    <div class="rep-confirm-box">
+      <div class="rep-title">&#9888; この代表者に確認メールを送信します</div>
+      <div class="rep-name" id="confirmRepName">-</div>
+      <div class="rep-email" id="confirmRepEmail">-</div>
+      <div class="rep-note">※ マスタDBから自動取得</div>
+    </div>
+    <div id="confirmContent"></div>
+    <button class="cancel-btn" onclick="hideConfirm()" style="margin-top:0;margin-bottom:8px;">戻って修正</button>
+    <button class="btn-send-rep" onclick="doSend()">
+      代表者確認 - 送信する
+      <span class="send-to" id="confirmSendTo">-</span>
+    </button>
+  </div>
+</div>
+
+<!-- Loading overlay (全画面) -->
+<div id="loadingOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#ffffff;z-index:200;justify-content:center;align-items:center;flex-direction:column;">
+  <div style="width:50px;height:50px;border:4px solid #e0e0e0;border-top:4px solid #1a73e8;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:16px;"></div>
+  <div id="loadingText" style="font-size:15px;color:#666;font-weight:600;">読み込み中...</div>
+</div>
+
+<script>
+// ===== GAS API URL =====
+const API_URL = 'https://script.google.com/macros/s/AKfycbzejwlaQBa4v1sWbDhWhiSHDt3ydAhyydu_3sLqFTVYaP2PY3de4fVxCfA1JNVgYOSX/exec';
+
+let tournaments = [];
+let selectedTeamIdx = -1;
+let selectedType = 1;
+let slotCount = 1;
+let currentTournament = null;
+let currentTeam = null;
+
+// ===== Init: GAS APIからデータ取得 =====
+function init() {
+  document.getElementById('initialLoading').style.display = 'block';
+  document.getElementById('mainContent').style.display = 'none';
+  fetch(API_URL + '?action=getTournaments')
+    .then(r => r.json())
+    .then(result => {
+      document.getElementById('initialLoading').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+      if (result.error) { showError(result.error); return; }
+      tournaments = result.tournaments || [];
+      if (tournaments.length === 0) {
+        document.getElementById('teamList').innerHTML = '<div style="text-align:center;color:#999;padding:30px;">本日の大会データがありません</div>';
+        return;
+      }
+      const select = document.getElementById('tournamentSelect');
+      select.innerHTML = '';
+      tournaments.forEach((t, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        const time = formatTime(t.time);
+        opt.textContent = t.venue + ' / ' + t.name + ' / ' + time;
+        select.appendChild(opt);
+      });
+      loadTeams();
+    })
+    .catch(err => {
+      document.getElementById('initialLoading').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+      showError('データの読み込みに失敗しました: ' + err.message);
+    });
+}
+
+function showError(msg) {
+  const el = document.getElementById('loadError');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text || '処理中...';
+  document.getElementById('loadingOverlay').style.display = 'flex';
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+// ===== 時間表示のクリーンアップ =====
+function formatTime(timeStr) {
+  // "Sat Dec 30 1899 19:15:00 GMT+0900..." → "19:15" に変換
+  if (!timeStr) return '';
+  // HH:mm〜HH:mm 形式ならそのまま
+  if (/^\d{1,2}:\d{2}/.test(timeStr)) return timeStr;
+  // "HH:mm〜HH:mm" の各パートを処理
+  return timeStr.split('〜').map(function(part) {
+    part = part.trim();
+    if (!part) return '';
+    var m = part.match(/(\d{1,2}:\d{2}:\d{2})/);
+    if (m) return m[1].substring(0, 5);
+    m = part.match(/(\d{1,2}:\d{2})/);
+    if (m) return m[1];
+    return part;
+  }).join('〜');
+}
+
+// ===== Step 1 =====
+function loadTeams() {
+  selectedTeamIdx = -1;
+  const tIdx = document.getElementById('tournamentSelect').value;
+  const t = tournaments[tIdx];
+  if (!t) return;
+  const container = document.getElementById('teamList');
+
+  let html = '';
+  t.teams.forEach((team, i) => {
+    html += '<div class="team-card" id="tc' + i + '" onclick="selectTeam(' + i + ')">';
+    html += '<div class="team-info">';
+    html += '<div class="team-name">' + team.team + '</div>';
+    html += '<div class="team-rep">' + team.rep + '</div>';
+    html += '<div class="team-rep" style="font-size:11px;color:#999">' + team.email + '</div>';
+    html += '</div>';
+    html += '<div class="team-check" id="tcheck' + i + '">&#10003;</div>';
+    html += '</div>';
+  });
+  container.innerHTML = html || '<div style="text-align:center;color:#999;padding:20px;">チームがありません</div>';
+  document.getElementById('typeSection').style.display = 'none';
+  document.getElementById('nextBtn').style.display = 'none';
+}
+
+function selectTeam(idx) {
+  selectedTeamIdx = idx;
+  const cards = document.querySelectorAll('.team-card');
+  cards.forEach((c, i) => c.classList.toggle('selected', i === idx));
+  document.getElementById('typeSection').style.display = 'block';
+  document.getElementById('nextBtn').style.display = 'block';
+  document.getElementById('typeSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function selectType(n) {
+  selectedType = n;
+  slotCount = n;
+  document.querySelectorAll('.type-btn').forEach((b, i) => {
+    b.classList.toggle('selected', i === n - 1);
+  });
+}
+
+// ===== Step 2 =====
+function goToForm() {
+  if (selectedTeamIdx < 0) return;
+  const staffName = document.getElementById('staffName').value.trim();
+  if (!staffName) { alert('入力者の名前を入力してください'); return; }
+
+  const tIdx = document.getElementById('tournamentSelect').value;
+  currentTournament = tournaments[tIdx];
+  currentTeam = currentTournament.teams[selectedTeamIdx];
+
+  document.getElementById('dispTeam').textContent = currentTeam.team;
+  document.getElementById('dispRep').textContent = currentTeam.rep;
+  // メアド入力フィールド
+  const emailInput = document.getElementById('inputEmail');
+  emailInput.value = currentTeam.email || '';
+  const emailNote = document.getElementById('emailNote');
+  if (currentTeam.email) {
+    emailInput.readOnly = true;
+    emailInput.style.background = '#f0f0f0';
+    emailInput.style.color = '#666';
+    emailNote.textContent = '※ マスタDBから自動取得';
+    emailNote.style.color = '#999';
+  } else {
+    emailInput.readOnly = false;
+    emailInput.style.background = '#fafafa';
+    emailInput.style.color = '#333';
+    emailNote.textContent = '※ マスタDBにメールアドレスがありません。入力してください。';
+    emailNote.style.color = '#d32f2f';
+  }
+  document.getElementById('dispTournament').textContent = currentTournament.date + ' ' + currentTournament.name;
+  document.getElementById('typeBadge').textContent = slotCount + '枠';
+
+  renderSlots();
+
+  document.getElementById('step1').classList.remove('active');
+  document.getElementById('step2').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function goBack() {
+  document.getElementById('step2').classList.remove('active');
+  document.getElementById('step1').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function renderSlots() {
+  const container = document.getElementById('bookingSlots');
+  let html = '';
+  for (let i = 1; i <= slotCount; i++) {
+    const showCopy = i > 1;
+    html += '<div class="booking-block" id="block' + i + '">';
+    html += '<div class="booking-number">予約' + i + '</div>';
+    if (showCopy) {
+      html += '<label class="copy-check">';
+      html += '<input type="checkbox" id="copy' + i + '" onchange="applyCopy(' + i + ')">';
+      html += '予約1と同じ内容をコピー</label>';
+    }
+    html += '<div id="fields' + i + '">';
+    html += '<div class="form-group"><label>日付 <span class="req">必須</span></label>';
+    html += '<input type="date" id="date' + i + '"></div>';
+    html += '<div class="form-group"><label>会場 <span class="req">必須</span></label>';
+    html += '<input type="text" id="venue' + i + '" placeholder="例: 品川区立総合体育館"></div>';
+    html += '<div class="form-row">';
+    html += '<div class="form-group"><label>受付時間 <span class="req">必須</span></label>';
+    html += '<input type="text" id="time' + i + '" placeholder="例: 10:00"></div>';
+    html += '<div class="form-group"><label>レベル <span class="req">必須</span></label>';
+    html += '<input type="text" id="level' + i + '" placeholder="例: エンジョイ"></div>';
+    html += '</div></div>';
+    // Payment per slot
+    html += '<div class="slot-payment">';
+    html += '<div class="form-group"><label>金額（税込）<span class="req">必須</span></label>';
+    html += '<input type="number" id="price' + i + '" placeholder="例: 17000" inputmode="numeric" oninput="calcTotal()"></div>';
+    html += '<div class="form-group"><label>クーポン</label>';
+    html += '<select id="coupon' + i + '" onchange="calcTotal()">';
+    html += '<option value="0">なし</option>';
+    html += '<option value="1000">1,000円引き</option>';
+    html += '<option value="2000">2,000円引き</option>';
+    html += '<option value="3000">3,000円引き</option>';
+    html += '<option value="5000">5,000円引き</option>';
+    html += '<option value="8000">8,000円引き</option>';
+    html += '</select></div>';
+    html += '<div class="slot-subtotal">';
+    html += '<span class="label">この枠の小計</span>';
+    html += '<span class="value" id="subtotal' + i + '">-</span>';
+    html += '</div></div>';
+    html += '</div>';
+  }
+  container.innerHTML = html;
+  calcTotal();
+}
+
+function applyCopy(n) {
+  const checked = document.getElementById('copy' + n).checked;
+  const fields = ['date', 'venue', 'time', 'level'];
+  fields.forEach(f => {
+    const input = document.getElementById(f + n);
+    if (checked) {
+      input.value = document.getElementById(f + '1').value;
+      input.classList.add('disabled');
+      input.readOnly = true;
+    } else {
+      input.classList.remove('disabled');
+      input.readOnly = false;
+    }
+  });
+}
+
+function calcTotal() {
+  let grandTotal = 0;
+  let breakdownHtml = '';
+
+  for (let i = 1; i <= slotCount; i++) {
+    const priceEl = document.getElementById('price' + i);
+    const couponEl = document.getElementById('coupon' + i);
+    const subtotalEl = document.getElementById('subtotal' + i);
+    if (!priceEl) continue;
+
+    const price = parseInt(priceEl.value) || 0;
+    const discount = parseInt(couponEl.value) || 0;
+    const subtotal = price - discount;
+
+    if (subtotalEl) {
+      subtotalEl.textContent = price ? '\u00a5' + subtotal.toLocaleString() : '-';
+    }
+
+    if (price) {
+      breakdownHtml += '<div class="gt-breakdown">';
+      breakdownHtml += '予約' + i + ': \u00a5' + price.toLocaleString();
+      if (discount) breakdownHtml += ' (-\u00a5' + discount.toLocaleString() + ')';
+      breakdownHtml += '</div>';
+      grandTotal += subtotal;
+    }
+  }
+
+  const breakdownEl = document.getElementById('totalBreakdown');
+  if (breakdownEl) breakdownEl.innerHTML = breakdownHtml;
+
+  const grandTotalEl = document.getElementById('dispGrandTotal');
+  if (grandTotalEl) grandTotalEl.textContent = grandTotal ? '\u00a5' + grandTotal.toLocaleString() : '-';
+}
+
+// ===== Confirm =====
+function showConfirm() {
+  // メールアドレスバリデーション
+  const inputEmail = document.getElementById('inputEmail').value.trim();
+  if (!inputEmail || inputEmail.indexOf('@') < 1) {
+    alert('メールアドレスを正しく入力してください。');
+    document.getElementById('inputEmail').focus();
+    return;
+  }
+
+  // Validation
+  for (let i = 1; i <= slotCount; i++) {
+    const date = document.getElementById('date' + i).value;
+    const venue = document.getElementById('venue' + i).value.trim();
+    const time = document.getElementById('time' + i).value.trim();
+    const level = document.getElementById('level' + i).value.trim();
+    const price = document.getElementById('price' + i).value;
+    if (!date || !venue || !time || !level || !price) {
+      alert('予約' + i + 'の入力が不足しています。\n全ての項目を入力してください。');
+      return;
+    }
+  }
+
+  document.getElementById('confirmRepName').textContent = currentTeam.rep;
+  document.getElementById('confirmRepEmail').textContent = inputEmail;
+  document.getElementById('confirmSendTo').textContent = currentTeam.rep + 'さん (' + inputEmail + ') へ送信';
+
+  let html = '';
+
+  html += '<div class="confirm-team">';
+  html += '<div class="ct-name">' + currentTeam.team + '</div>';
+  html += '<div class="ct-rep">代表者: ' + currentTeam.rep + ' 様</div>';
+  html += '</div>';
+
+  for (let i = 1; i <= slotCount; i++) {
+    const dateVal = document.getElementById('date' + i).value || '未入力';
+    const venueVal = document.getElementById('venue' + i).value || '未入力';
+    const timeVal = document.getElementById('time' + i).value || '未入力';
+    const levelVal = document.getElementById('level' + i).value || '未入力';
+
+    let dateDisplay = dateVal;
+    if (dateVal && dateVal !== '未入力') {
+      const d = new Date(dateVal);
+      const weekdays = ['日','月','火','水','木','金','土'];
+      dateDisplay = (d.getMonth()+1) + '月' + d.getDate() + '日（' + weekdays[d.getDay()] + '）';
+    }
+
+    html += '<div class="confirm-booking">';
+    if (slotCount > 1) html += '<div class="confirm-booking-title">予約' + i + '</div>';
+    html += '<div class="confirm-booking-main">' + dateDisplay + '</div>';
+    html += '<div class="confirm-booking-detail">';
+    html += venueVal + '<br>';
+    html += timeVal + '〜 / ' + levelVal;
+    html += '</div></div>';
+  }
+
+  // Payment
+  html += '<div class="confirm-payment">';
+  for (let i = 1; i <= slotCount; i++) {
+    const price = parseInt(document.getElementById('price' + i).value) || 0;
+    const discount = parseInt(document.getElementById('coupon' + i).value) || 0;
+    if (price) {
+      html += '<div class="pay-row"><span>予約' + i + '</span><span>\u00a5' + price.toLocaleString();
+      if (discount) html += ' <span style="color:#d32f2f;font-size:12px">(-\u00a5' + discount.toLocaleString() + ')</span>';
+      html += '</span></div>';
+    }
+  }
+  html += '<div class="pay-total"><span>合計お支払い額</span><span>' + document.getElementById('dispGrandTotal').textContent + '</span></div>';
+  html += '</div>';
+
+  // 備考
+  const remarks = (document.getElementById('remarks').value || '').trim();
+  if (remarks) {
+    html += '<div style="background:#fff3e0;border-radius:10px;padding:12px 14px;margin-bottom:12px;">';
+    html += '<div style="font-size:12px;color:#e65100;font-weight:700;margin-bottom:4px;">📝 備考（社内用・メールには記載されません）</div>';
+    html += '<div style="font-size:14px;color:#333;white-space:pre-wrap;">' + remarks.replace(/</g,'&lt;') + '</div>';
+    html += '</div>';
+  }
+
+  html += '<div style="text-align:center;font-size:13px;color:#888;margin-bottom:8px;">入力者: ' + document.getElementById('staffName').value + '</div>';
+
+  document.getElementById('confirmContent').innerHTML = html;
+  document.getElementById('confirmOverlay').classList.add('show');
+}
+
+function hideConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('show');
+}
+
+let isSending = false;
+function doSend() {
+  if (isSending) return;
+  isSending = true;
+  const sendBtn = document.querySelector('.btn-send-rep');
+  sendBtn.disabled = true;
+  sendBtn.textContent = '送信中...';
+
+  showLoading('送信中...');
+  hideConfirm();
+
+  const couponLabels = { '0': 'なし', '1000': '1,000円引き', '2000': '2,000円引き', '3000': '3,000円引き', '5000': '5,000円引き', '8000': '8,000円引き' };
+  const bookings = [];
+  let grandTotal = 0;
+  for (let i = 1; i <= slotCount; i++) {
+    const price = parseInt(document.getElementById('price' + i).value) || 0;
+    const couponVal = document.getElementById('coupon' + i).value;
+    const discount = parseInt(couponVal) || 0;
+    const subtotal = price - discount;
+    grandTotal += subtotal;
+    bookings.push({
+      date: document.getElementById('date' + i).value,
+      venue: document.getElementById('venue' + i).value,
+      time: document.getElementById('time' + i).value,
+      level: document.getElementById('level' + i).value,
+      price: price, couponValue: couponVal, couponLabel: couponLabels[couponVal] || 'なし',
+      discount: discount, subtotal: subtotal,
+    });
+  }
+
+  const enteredEmail = document.getElementById('inputEmail').value.trim();
+  const formData = {
+    staffName: document.getElementById('staffName').value,
+    slotCount: slotCount,
+    team: currentTeam.team, rep: currentTeam.rep,
+    phone: currentTeam.phone, email: enteredEmail,
+    realEmail: currentTeam.realEmail || currentTeam.email,
+    tournamentId: currentTeam.tournamentId || '',
+    tournamentName: currentTournament.name, venue: currentTournament.venue,
+    bookings: bookings, grandTotal: grandTotal,
+    remarks: (document.getElementById('remarks').value || '').trim(),
+  };
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(formData),
+  })
+  .then(r => r.json())
+  .then(results => {
+    hideLoading();
+    let warnings = '';
+    if (results.cw && results.cw !== 'OK') warnings += '<div style="background:#fff8e1;color:#f57f17;padding:10px;border-radius:8px;font-size:13px;margin-bottom:8px;">Chatwork: ' + results.cw + '</div>';
+    if (results.email && results.email !== 'OK' && !(results.email+'').startsWith('スキップ')) warnings += '<div style="background:#fff8e1;color:#f57f17;padding:10px;border-radius:8px;font-size:13px;margin-bottom:8px;">メール: ' + results.email + '</div>';
+    document.getElementById('completeWarnings') && (document.getElementById('completeWarnings').innerHTML = warnings);
+    document.getElementById('completeSummary').innerHTML =
+      '<strong>' + currentTeam.rep + '</strong>さん<br>' +
+      '<span style="font-size:12px;color:#666">' + currentTeam.email + '</span><br>へメール送信済み';
+    document.getElementById('step2').classList.remove('active');
+    document.getElementById('step3').classList.add('active');
+    window.scrollTo(0, 0);
+  })
+  .catch(err => {
+    hideLoading();
+    isSending = false;
+    const sendBtn = document.querySelector('.btn-send-rep');
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = '代表者確認 - 送信する<span class="send-to" id="confirmSendTo">' + currentTeam.rep + 'さん (' + document.getElementById('inputEmail').value.trim() + ') へ送信</span>';
+    alert('送信に失敗しました。もう一度お試しください。\n\n' + err.message);
+  });
+}
+
+// Init
+init();
+const savedStaff = localStorage.getItem('sokketsu_staff');
+if (savedStaff) document.getElementById('staffName').value = savedStaff;
+document.getElementById('staffName').addEventListener('blur', function() {
+  localStorage.setItem('sokketsu_staff', this.value);
+});
+</script>
+</body>
+</html>

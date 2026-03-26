@@ -166,6 +166,56 @@
     accent-color: #1a73e8;
   }
 
+  /* Rental section */
+  .rental-section {
+    border-top: 1px solid #eee;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  .rental-section .rental-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #555;
+    margin-bottom: 8px;
+  }
+  .rental-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+  }
+  .rental-item:last-child { border-bottom: none; }
+  .rental-item input[type="checkbox"] {
+    width: 20px; height: 20px;
+    accent-color: #1a73e8;
+    flex-shrink: 0;
+  }
+  .rental-item .rental-label { flex: 1; }
+  .rental-item .rental-price {
+    font-weight: 700;
+    color: #1a73e8;
+    white-space: nowrap;
+  }
+  .rental-item select {
+    padding: 6px 8px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #fff;
+    -webkit-appearance: none;
+  }
+  .rental-subtotal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #e67e22;
+  }
+
   /* Payment area inside booking */
   .slot-payment {
     border-top: 2px dashed #e0e0e0;
@@ -627,7 +677,7 @@
 
     <!-- Today's tournament info -->
     <div class="section">
-      <div class="section-title">&#9917; 今回の大会</div>
+      <div class="section-title">&#127936; 今回の大会</div>
       <div class="info-row">
         <span class="info-label">チーム名</span>
         <span class="info-value" id="dispTeam">-</span>
@@ -657,6 +707,7 @@
     <div class="grand-total-box" id="totalSection">
       <div class="gt-title">お支払い合計</div>
       <div id="totalBreakdown"></div>
+      <div id="rentalBreakdown"></div>
       <div class="gt-amount" id="dispGrandTotal">-</div>
     </div>
 
@@ -909,9 +960,34 @@ function renderSlots() {
     html += '<option value="1000">1,000円引き</option>';
     html += '<option value="2000">2,000円引き</option>';
     html += '<option value="3000">3,000円引き</option>';
+    html += '<option value="4000">4,000円引き</option>';
     html += '<option value="5000">5,000円引き</option>';
     html += '<option value="8000">8,000円引き</option>';
     html += '</select></div>';
+    html += '<div class="rental-section">';
+    html += '<div class="rental-title">レンタル品</div>';
+    html += '<div class="rental-item">';
+    html += '<input type="checkbox" id="rental_bib' + i + '" onchange="calcTotal()">';
+    html += '<span class="rental-label">ビブス1セット(10枚)</span>';
+    html += '<span class="rental-price">\u00a51,000</span></div>';
+    html += '<div class="rental-item">';
+    html += '<input type="checkbox" id="rental_ball' + i + '" onchange="calcTotal()">';
+    html += '<span class="rental-label">ボール1球</span>';
+    html += '<span class="rental-price">\u00a5500</span></div>';
+    html += '<div class="rental-item">';
+    html += '<input type="checkbox" id="rental_shoes' + i + '" onchange="toggleShoeSize(' + i + '); calcTotal()">';
+    html += '<span class="rental-label">バスケットシューズ1足</span>';
+    html += '<span class="rental-price">\u00a51,500</span></div>';
+    html += '<div class="rental-item" id="shoeSize' + i + '" style="display:none; padding-left:30px;">';
+    html += '<label style="font-size:12px;color:#666;">サイズ:</label>';
+    html += '<select id="rental_shoes_size' + i + '">';
+    html += '<option value="">選択</option>';
+    for (let s = 26.0; s <= 29.0; s += 0.5) {
+      html += '<option value="' + s.toFixed(1) + '">' + s.toFixed(1) + 'cm</option>';
+    }
+    html += '</select></div>';
+    html += '<div class="rental-subtotal"><span>レンタル小計</span><span id="rentalSubtotal' + i + '">-</span></div>';
+    html += '</div>';
     html += '<div class="slot-subtotal">';
     html += '<span class="label">この枠の小計</span>';
     html += '<span class="value" id="subtotal' + i + '">-</span>';
@@ -938,22 +1014,64 @@ function applyCopy(n) {
   });
 }
 
+function toggleShoeSize(i) {
+  const cb = document.getElementById('rental_shoes' + i);
+  const el = document.getElementById('shoeSize' + i);
+  el.style.display = cb.checked ? 'flex' : 'none';
+}
+
+function getRentalTotal(i) {
+  let total = 0;
+  if (document.getElementById('rental_bib' + i).checked) total += 1000;
+  if (document.getElementById('rental_ball' + i).checked) total += 500;
+  if (document.getElementById('rental_shoes' + i).checked) total += 1500;
+  return total;
+}
+
+function getRentalLabels(i) {
+  var items = [];
+  if (document.getElementById('rental_bib' + i).checked) items.push('ビブス(\u00a51,000)');
+  if (document.getElementById('rental_ball' + i).checked) items.push('ボール(\u00a5500)');
+  if (document.getElementById('rental_shoes' + i).checked) {
+    var size = document.getElementById('rental_shoes_size' + i).value;
+    items.push('シューズ' + (size ? size + 'cm' : '') + '(\u00a51,500)');
+  }
+  return items;
+}
+
+function getRentalData(i) {
+  return {
+    bib: document.getElementById('rental_bib' + i).checked,
+    ball: document.getElementById('rental_ball' + i).checked,
+    shoes: document.getElementById('rental_shoes' + i).checked,
+    shoesSize: document.getElementById('rental_shoes' + i).checked ? document.getElementById('rental_shoes_size' + i).value : '',
+    rentalTotal: getRentalTotal(i),
+    rentalLabels: getRentalLabels(i),
+  };
+}
+
 function calcTotal() {
   let grandTotal = 0;
+  let rentalGrandTotal = 0;
   let breakdownHtml = '';
 
   for (let i = 1; i <= slotCount; i++) {
     const priceEl = document.getElementById('price' + i);
     const couponEl = document.getElementById('coupon' + i);
     const subtotalEl = document.getElementById('subtotal' + i);
+    const rentalSubEl = document.getElementById('rentalSubtotal' + i);
     if (!priceEl) continue;
 
     const price = parseInt(priceEl.value) || 0;
     const discount = parseInt(couponEl.value) || 0;
+    const rental = getRentalTotal(i);
     const subtotal = price - discount;
 
     if (subtotalEl) {
       subtotalEl.textContent = price ? '\u00a5' + subtotal.toLocaleString() : '-';
+    }
+    if (rentalSubEl) {
+      rentalSubEl.textContent = rental ? '\u00a5' + rental.toLocaleString() : '-';
     }
 
     if (price) {
@@ -963,13 +1081,22 @@ function calcTotal() {
       breakdownHtml += '</div>';
       grandTotal += subtotal;
     }
+    rentalGrandTotal += rental;
   }
 
   const breakdownEl = document.getElementById('totalBreakdown');
   if (breakdownEl) breakdownEl.innerHTML = breakdownHtml;
 
+  const rentalBreakdownEl = document.getElementById('rentalBreakdown');
+  if (rentalBreakdownEl) {
+    rentalBreakdownEl.innerHTML = rentalGrandTotal > 0
+      ? '<div class="gt-breakdown" style="color:#f5c542;">レンタル合計: \u00a5' + rentalGrandTotal.toLocaleString() + '</div>'
+      : '';
+  }
+
+  const total = grandTotal + rentalGrandTotal;
   const grandTotalEl = document.getElementById('dispGrandTotal');
-  if (grandTotalEl) grandTotalEl.textContent = grandTotal ? '\u00a5' + grandTotal.toLocaleString() : '-';
+  if (grandTotalEl) grandTotalEl.textContent = total ? '\u00a5' + total.toLocaleString() : '-';
 }
 
 // ===== Confirm =====
@@ -1025,6 +1152,8 @@ function showConfirm() {
     html += '<div class="confirm-booking-detail">';
     html += venueVal + '<br>';
     html += timeVal + '〜 / ' + levelVal;
+    var rentalItems = getRentalLabels(i);
+    if (rentalItems.length) html += '<br><span style="color:#e67e22;font-size:12px;">レンタル: ' + rentalItems.join(', ') + '</span>';
     html += '</div></div>';
   }
 
@@ -1038,6 +1167,11 @@ function showConfirm() {
       if (discount) html += ' <span style="color:#d32f2f;font-size:12px">(-\u00a5' + discount.toLocaleString() + ')</span>';
       html += '</span></div>';
     }
+  }
+  var confirmRentalTotal = 0;
+  for (let i = 1; i <= slotCount; i++) confirmRentalTotal += getRentalTotal(i);
+  if (confirmRentalTotal > 0) {
+    html += '<div class="pay-row" style="color:#e67e22;"><span>レンタル合計</span><span>\u00a5' + confirmRentalTotal.toLocaleString() + '</span></div>';
   }
   html += '<div class="pay-total"><span>合計額</span><span>' + document.getElementById('dispGrandTotal').textContent + '</span></div>';
   html += '</div>';
@@ -1072,15 +1206,18 @@ function doSend() {
   showLoading('送信中...');
   hideConfirm();
 
-  const couponLabels = { '0': 'なし', '1000': '1,000円引き', '2000': '2,000円引き', '3000': '3,000円引き', '5000': '5,000円引き', '8000': '8,000円引き' };
+  const couponLabels = { '0': 'なし', '1000': '1,000円引き', '2000': '2,000円引き', '3000': '3,000円引き', '4000': '4,000円引き', '5000': '5,000円引き', '8000': '8,000円引き' };
   const bookings = [];
   let grandTotal = 0;
+  let rentalGrandTotal = 0;
   for (let i = 1; i <= slotCount; i++) {
     const price = parseInt(document.getElementById('price' + i).value) || 0;
     const couponVal = document.getElementById('coupon' + i).value;
     const discount = parseInt(couponVal) || 0;
     const subtotal = price - discount;
     grandTotal += subtotal;
+    const rental = getRentalData(i);
+    rentalGrandTotal += rental.rentalTotal;
     bookings.push({
       date: document.getElementById('date' + i).value,
       venue: document.getElementById('venue' + i).value,
@@ -1088,6 +1225,7 @@ function doSend() {
       level: document.getElementById('level' + i).value,
       price: price, couponValue: couponVal, couponLabel: couponLabels[couponVal] || 'なし',
       discount: discount, subtotal: subtotal,
+      rental: rental,
     });
   }
 
@@ -1100,7 +1238,8 @@ function doSend() {
     realEmail: currentTeam.realEmail || currentTeam.email,
     tournamentId: currentTeam.tournamentId || '',
     tournamentName: currentTournament.name, venue: currentTournament.venue,
-    bookings: bookings, grandTotal: grandTotal,
+    bookings: bookings, grandTotal: grandTotal + rentalGrandTotal,
+    rentalGrandTotal: rentalGrandTotal,
     remarks: (document.getElementById('remarks').value || '').trim(),
   };
 

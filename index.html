@@ -971,9 +971,13 @@ function renderSlots() {
     html += '<span class="rental-label">ビブス1セット(10枚)</span>';
     html += '<span class="rental-price">\u00a51,000</span></div>';
     html += '<div class="rental-item">';
-    html += '<input type="checkbox" id="rental_ball' + i + '" onchange="calcTotal()">';
-    html += '<span class="rental-label">ボール1球</span>';
-    html += '<span class="rental-price">\u00a5500</span></div>';
+    html += '<span class="rental-label">ボール(1球\u00a5500)</span>';
+    html += '<select id="rental_ball' + i + '" onchange="calcTotal()" style="width:70px;">';
+    html += '<option value="0">0個</option>';
+    for (let bn = 1; bn <= 10; bn++) {
+      html += '<option value="' + bn + '">' + bn + '個</option>';
+    }
+    html += '</select></div>';
     html += '<div class="rental-item">';
     html += '<input type="checkbox" id="rental_shoes' + i + '" onchange="toggleShoeSize(' + i + '); calcTotal()">';
     html += '<span class="rental-label">バスケットシューズ1足</span>';
@@ -1023,7 +1027,8 @@ function toggleShoeSize(i) {
 function getRentalTotal(i) {
   let total = 0;
   if (document.getElementById('rental_bib' + i).checked) total += 1000;
-  if (document.getElementById('rental_ball' + i).checked) total += 500;
+  var ballCount = parseInt(document.getElementById('rental_ball' + i).value) || 0;
+  total += ballCount * 500;
   if (document.getElementById('rental_shoes' + i).checked) total += 1500;
   return total;
 }
@@ -1031,7 +1036,8 @@ function getRentalTotal(i) {
 function getRentalLabels(i) {
   var items = [];
   if (document.getElementById('rental_bib' + i).checked) items.push('ビブス(\u00a51,000)');
-  if (document.getElementById('rental_ball' + i).checked) items.push('ボール(\u00a5500)');
+  var ballCount = parseInt(document.getElementById('rental_ball' + i).value) || 0;
+  if (ballCount > 0) items.push('ボール' + ballCount + '球(\u00a5' + (ballCount * 500).toLocaleString() + ')');
   if (document.getElementById('rental_shoes' + i).checked) {
     var size = document.getElementById('rental_shoes_size' + i).value;
     items.push('シューズ' + (size ? size + 'cm' : '') + '(\u00a51,500)');
@@ -1042,7 +1048,7 @@ function getRentalLabels(i) {
 function getRentalData(i) {
   return {
     bib: document.getElementById('rental_bib' + i).checked,
-    ball: document.getElementById('rental_ball' + i).checked,
+    ballCount: parseInt(document.getElementById('rental_ball' + i).value) || 0,
     shoes: document.getElementById('rental_shoes' + i).checked,
     shoesSize: document.getElementById('rental_shoes' + i).checked ? document.getElementById('rental_shoes_size' + i).value : '',
     rentalTotal: getRentalTotal(i),

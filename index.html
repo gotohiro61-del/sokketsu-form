@@ -1342,24 +1342,18 @@ function showCompleteScreen(cwOk, emailOk, emailSkipped, results, formData, isNe
     // パターン2: CW成功 + メール失敗
     html += '<div class="check-icon warning">&#9888;</div>';
     html += '<h2>予約の登録はできました！</h2>';
-    html += '<p>ただ、お客様へのメールだけ<br>うまく送れませんでした</p>';
+    html += '<p>お客様へのメールだけ<br>うまく送れませんでした</p>';
     html += '<p style="color:#2e7d32;font-size:14px;font-weight:700;margin-bottom:16px;">予約自体は登録済みなので<br>ご安心ください</p>';
+    html += '<p style="font-size:13px;color:#888;margin-bottom:8px;">事務局に自動で通知済みです</p>';
     html += '<button class="close-btn" onclick="goToHistoryFromComplete()">送信履歴からメールを再送する</button>';
-    html += '<div class="error-guide" style="margin-top:12px;">';
-    html += '再送してもダメなら<br>この画面のスクショを<br><strong>事務局LINEに送ってください</strong>';
-    html += '<div class="error-code">#M001 ' + today + ' ' + now + '<br>' + formData.rep + '様 / ' + formData.team + '</div>';
-    html += '</div>';
+    html += '<button class="cancel-btn" onclick="goToTop()" style="margin-top:8px;">トップに戻る</button>';
 
   } else if (!cwOk && emailOk) {
     // パターン3: CW失敗 + メール成功
     html += '<div class="check-icon warning">&#9651;</div>';
     html += '<h2>お客様へのメールは<br>送れました</h2>';
-    html += '<p>ただ、社内への登録が<br>うまくいきませんでした</p>';
-    html += '<p style="color:#2e7d32;font-size:14px;font-weight:700;margin-bottom:16px;">お客様側は問題ありません</p>';
-    html += '<div class="error-guide">';
-    html += 'この画面のスクショを<br><strong>事務局LINEに送ってください</strong><br>（事務局側で登録します）';
-    html += '<div class="error-code">#C001 ' + today + ' ' + now + '<br>' + formData.rep + '様 / ' + formData.team + '</div>';
-    html += '</div>';
+    html += '<p>社内への登録がうまくいきませんでしたが<br>事務局に自動で通知済みです</p>';
+    html += '<p style="color:#2e7d32;font-size:14px;font-weight:700;margin-bottom:16px;">お客様側は問題ありません<br>そのまま次の対応へ進んでください</p>';
     html += '<button class="close-btn" onclick="goToHistoryFromComplete()" style="margin-top:16px;">送信履歴を見る</button>';
     html += '<button class="cancel-btn" onclick="goToTop()">トップに戻る</button>';
 
@@ -1367,13 +1361,8 @@ function showCompleteScreen(cwOk, emailOk, emailSkipped, results, formData, isNe
     // パターン4: 両方失敗（通信エラー含む）
     html += '<div class="check-icon error">&#10005;</div>';
     html += '<h2>送信できませんでした</h2>';
-    html += '<p>電波が届きにくい場所かも<br>しれません</p>';
-    html += '<button class="resend-btn" onclick="goToTop()" style="font-size:16px;padding:16px;background:#d32f2f;">もう一度やり直す</button>';
-    html += '<p style="font-size:13px;color:#c62828;margin-top:6px;">&#8593; 場所を移動してから<br>押してみてください</p>';
-    html += '<div class="error-guide">';
-    html += '2回やってもダメなら<br>この画面のスクショを<br><strong>事務局LINEに送ってください</strong>';
-    html += '<div class="error-code">#E001 ' + today + ' ' + now + '<br>' + formData.rep + '様 / ' + formData.team + '</div>';
-    html += '</div>';
+    html += '<p>電波が届きにくい場所かもしれません<br>場所を変えてもう一度お試しください</p>';
+    html += '<button class="close-btn" onclick="goToTop()" style="margin-top:16px;background:#d32f2f;">もう一度やり直す</button>';
   }
 
   screen.innerHTML = html;
@@ -1506,13 +1495,9 @@ function renderHistory() {
       }
     }
 
-    // CW失敗時のガイド
-    if (!item.cwOk && !item.networkError) {
-      const today = getTodayStr().replace(/-/g, '/');
-      html += '<div class="error-guide">';
-      html += 'この画面のスクショを<br><strong>事務局LINEに送ってください</strong>';
-      html += '<div class="error-code">#C001 ' + today + ' ' + item.time + '<br>' + item.rep + '様 / ' + item.team + '</div>';
-      html += '</div>';
+    // エラー時は事務局通知済みを表示
+    if (!item.cwOk || (!item.emailOk && !item.emailSkipped)) {
+      html += '<div style="font-size:12px;color:#888;margin-top:6px;padding:8px;background:#f5f5f5;border-radius:8px;">事務局に自動で通知済みです</div>';
     }
 
     html += '</div>';

@@ -1335,10 +1335,6 @@ function showCompleteScreen(cwOk, emailOk, emailSkipped, results, formData, isNe
     html += '<p style="color:#333;font-size:13px;background:#f0f0f0;padding:12px;border-radius:10px;margin-bottom:16px;">';
     html += '<strong>' + formData.rep + '</strong>さん<br>';
     html += '<span style="font-size:12px;color:#666">' + formData.email + '</span><br>へメール送信済み</p>';
-    html += '<hr class="divider">';
-    html += '<p style="font-size:13px;color:#888;margin-bottom:8px;">お客様に届いていない場合</p>';
-    html += '<button class="resend-btn" onclick="resendEmailFromComplete()">メールだけもう一度送る</button>';
-    html += '<p style="font-size:11px;color:#999;margin-top:6px;">※ 予約の二重登録にはなりません</p>';
     html += '<button class="close-btn" onclick="goToHistoryFromComplete()" style="margin-top:16px;">送信履歴を見る</button>';
     html += '<button class="cancel-btn" onclick="goToTop()">トップに戻る</button>';
 
@@ -1348,13 +1344,11 @@ function showCompleteScreen(cwOk, emailOk, emailSkipped, results, formData, isNe
     html += '<h2>予約の登録はできました！</h2>';
     html += '<p>ただ、お客様へのメールだけ<br>うまく送れませんでした</p>';
     html += '<p style="color:#2e7d32;font-size:14px;font-weight:700;margin-bottom:16px;">予約自体は登録済みなので<br>ご安心ください</p>';
-    html += '<button class="resend-btn" onclick="resendEmailFromComplete()" style="font-size:16px;padding:16px;">もう一度メールを送る</button>';
-    html += '<p style="font-size:13px;color:#e65100;margin-top:6px;">&#8593; まずこのボタンを押してください</p>';
-    html += '<div class="error-guide">';
-    html += '2回やってもダメなら<br>この画面のスクショを<br><strong>事務局LINEに送ってください</strong>';
+    html += '<button class="close-btn" onclick="goToHistoryFromComplete()">送信履歴からメールを再送する</button>';
+    html += '<div class="error-guide" style="margin-top:12px;">';
+    html += '再送してもダメなら<br>この画面のスクショを<br><strong>事務局LINEに送ってください</strong>';
     html += '<div class="error-code">#M001 ' + today + ' ' + now + '<br>' + formData.rep + '様 / ' + formData.team + '</div>';
     html += '</div>';
-    html += '<button class="cancel-btn" onclick="goToHistoryFromComplete()" style="margin-top:12px;">送信履歴を見る</button>';
 
   } else if (!cwOk && emailOk) {
     // パターン3: CW失敗 + メール成功
@@ -1383,53 +1377,6 @@ function showCompleteScreen(cwOk, emailOk, emailSkipped, results, formData, isNe
   }
 
   screen.innerHTML = html;
-}
-
-// ===== メール再送（完了画面から） =====
-function resendEmailFromComplete() {
-  if (!lastFormData) { alert('送信データがありません'); return; }
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = '送信中...';
-
-  const resendData = Object.assign({}, lastFormData, { action: 'resendEmail' });
-
-  fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(resendData),
-  })
-  .then(r => r.json())
-  .then(results => {
-    if (results.email === 'OK') {
-      btn.textContent = '送信できました！';
-      btn.style.background = '#4caf50';
-      // 履歴も更新
-      const history = getHistory();
-      if (history.items.length > 0) {
-        history.items[0].emailOk = true;
-        history.items[0].emailDetail = 'OK（再送）';
-        saveHistory(history);
-      }
-    } else {
-      btn.textContent = '送れませんでした...';
-      btn.style.background = '#d32f2f';
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.textContent = 'もう一度メールを送る';
-        btn.style.background = '#ff9800';
-      }, 2000);
-    }
-  })
-  .catch(err => {
-    btn.textContent = '通信エラー...';
-    btn.style.background = '#d32f2f';
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.textContent = 'もう一度メールを送る';
-      btn.style.background = '#ff9800';
-    }, 2000);
-  });
 }
 
 // ===== メール再送（履歴画面から） =====

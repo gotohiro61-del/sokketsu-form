@@ -554,7 +554,6 @@
     font-weight: 700;
     cursor: pointer;
     margin-bottom: 12px;
-    display: none;
   }
   .history-btn:active { background: #e8f0fe; }
 
@@ -870,10 +869,9 @@ function updateHistoryBtnVisibility() {
   const history = getHistory();
   const btn = document.getElementById('historyBtn');
   if (history.items.length > 0) {
-    btn.style.display = 'block';
     btn.textContent = '\u{1F4CB} 今日の送信履歴を見る（' + history.items.length + '件）';
   } else {
-    btn.style.display = 'none';
+    btn.textContent = '\u{1F4CB} 今日の送信履歴を見る';
   }
 }
 

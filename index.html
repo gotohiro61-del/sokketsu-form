@@ -826,50 +826,31 @@ let slotCount = 1;
 let currentTournament = null;
 let currentTeam = null;
 
-// ===== 送信履歴 (localStorage) =====
-const HISTORY_KEY = 'sokketsu_history';
+// ===== 送信履歴 (API取得) =====
+let cachedHistory = { items: [] };
 
-function getTodayStr() {
-  const d = new Date();
-  return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+function fetchHistory(callback) {
+  fetch(API_URL + '?action=getHistory')
+    .then(r => r.json())
+    .then(data => {
+      cachedHistory = data;
+      updateHistoryBtnVisibility();
+      if (callback) callback(data);
+    })
+    .catch(err => {
+      console.error('履歴取得エラー:', err);
+      if (callback) callback(cachedHistory);
+    });
 }
 
 function getHistory() {
-  try {
-    const data = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
-    const today = getTodayStr();
-    // 日付が変わったらクリア
-    if (data.date !== today) return { date: today, items: [] };
-    return data;
-  } catch(e) {
-    return { date: getTodayStr(), items: [] };
-  }
-}
-
-function saveHistory(history) {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-}
-
-function addToHistory(entry) {
-  const history = getHistory();
-  history.items.unshift(entry); // 先頭に追加（新しい順）
-  saveHistory(history);
-  updateHistoryBtnVisibility();
-}
-
-function updateHistoryEntry(idx, updates) {
-  const history = getHistory();
-  if (history.items[idx]) {
-    Object.assign(history.items[idx], updates);
-    saveHistory(history);
-  }
+  return cachedHistory;
 }
 
 function updateHistoryBtnVisibility() {
-  const history = getHistory();
   const btn = document.getElementById('historyBtn');
-  if (history.items.length > 0) {
-    btn.textContent = '\u{1F4CB} 今日の送信履歴を見る（' + history.items.length + '件）';
+  if (cachedHistory.items.length > 0) {
+    btn.textContent = '\u{1F4CB} 今日の送信履歴を見る（' + cachedHistory.items.length + '件）';
   } else {
     btn.textContent = '\u{1F4CB} 今日の送信履歴を見る';
   }
@@ -1268,21 +1249,8 @@ function doSend() {
     const emailOk = results.email === 'OK' || (results.email+'').startsWith('スキップ');
     const emailSkipped = (results.email+'').startsWith('スキップ');
 
-    // 履歴に保存
-    const historyEntry = {
-      time: formatNow(),
-      rep: formData.rep,
-      team: formData.team,
-      email: formData.email,
-      slotCount: formData.slotCount,
-      cwOk: cwOk,
-      emailOk: emailOk,
-      emailSkipped: emailSkipped,
-      cwDetail: results.cw || '',
-      emailDetail: results.email || '',
-      formData: formData, // 再送用
-    };
-    addToHistory(historyEntry);
+    // 履歴をリフレッシュ（DBに記録済みなのでAPIから再取得）
+    fetchHistory();
 
     // 完了画面を表示
     showCompleteScreen(cwOk, emailOk, emailSkipped, results, formData);
@@ -1295,22 +1263,7 @@ function doSend() {
     hideLoading();
     isSending = false;
 
-    // 通信エラー（パターン4）: 履歴に保存
-    const historyEntry = {
-      time: formatNow(),
-      rep: formData.rep,
-      team: formData.team,
-      email: formData.email,
-      slotCount: formData.slotCount,
-      cwOk: false,
-      emailOk: false,
-      emailSkipped: false,
-      cwDetail: '通信エラー',
-      emailDetail: '通信エラー',
-      networkError: true,
-      formData: formData,
-    };
-    addToHistory(historyEntry);
+    // 通信エラー（パターン4）: DBにも記録されていないのでリフレッシュ不要
 
     showCompleteScreen(false, false, false, null, formData, true);
 
@@ -1324,7 +1277,8 @@ function doSend() {
 function showCompleteScreen(cwOk, emailOk, emailSkipped, results, formData, isNetworkError) {
   const screen = document.getElementById('completeScreen');
   const now = formatNow();
-  const today = getTodayStr().replace(/-/g, '/');
+  const d = new Date();
+  const today = d.getFullYear() + '/' + ('0'+(d.getMonth()+1)).slice(-2) + '/' + ('0'+d.getDate()).slice(-2);
   let html = '';
 
   if (cwOk && emailOk) {
@@ -1372,13 +1326,25 @@ function showCompleteScreen(cwOk, emailOk, emailSkipped, results, formData, isNe
 function resendEmailFromHistory(historyIdx) {
   const history = getHistory();
   const entry = history.items[historyIdx];
-  if (!entry || !entry.formData) { alert('送信データがありません'); return; }
+  if (!entry) { alert('送信データがありません'); return; }
 
   const btn = event.target;
   btn.disabled = true;
   btn.textContent = '送信中...';
 
-  const resendData = Object.assign({}, entry.formData, { action: 'resendEmail' });
+  // DBの履歴データから再送に必要な情報を組み立て
+  const resendData = {
+    action: 'resendEmail',
+    team: entry.team,
+    rep: entry.rep,
+    email: entry.email,
+    phone: entry.phone || '',
+    tournamentName: entry.tournamentName || '',
+    venue: entry.venue || '',
+    slotCount: entry.slotCount || 1,
+    staffName: entry.staffName || '',
+    rowIndex: entry.rowIndex, // DB行番号（結果更新用）
+  };
 
   fetch(API_URL, {
     method: 'POST',
@@ -1390,12 +1356,8 @@ function resendEmailFromHistory(historyIdx) {
     if (results.email === 'OK') {
       btn.textContent = '送信できました！';
       btn.style.background = '#4caf50';
-      // 履歴更新
-      history.items[historyIdx].emailOk = true;
-      history.items[historyIdx].emailDetail = 'OK（再送）';
-      saveHistory(history);
-      // 2秒後に履歴リフレッシュ
-      setTimeout(() => renderHistory(), 2000);
+      // 2秒後にDBから履歴リフレッシュ
+      setTimeout(() => fetchHistory(() => renderHistory()), 2000);
     } else {
       btn.textContent = '送れませんでした...';
       btn.style.background = '#d32f2f';
@@ -1421,7 +1383,9 @@ function resendEmailFromHistory(historyIdx) {
 function showHistory() {
   document.getElementById('step1').classList.remove('active');
   document.getElementById('step4').classList.add('active');
-  renderHistory();
+  // APIから最新履歴を取得して表示
+  renderHistory(); // まず現在のキャッシュで表示
+  fetchHistory(() => renderHistory()); // API取得後に再描画
   window.scrollTo(0, 0);
 }
 
@@ -1435,6 +1399,7 @@ function goToHistoryFromComplete() {
   document.getElementById('step3').classList.remove('active');
   document.getElementById('step4').classList.add('active');
   renderHistory();
+  fetchHistory(() => renderHistory());
   window.scrollTo(0, 0);
 }
 
@@ -1477,7 +1442,8 @@ function renderHistory() {
       html += '<div class="hc-status fail">&#10005; 予約登録エラー</div>';
     }
 
-    if (item.emailSkipped) {
+    const emailSkipped = item.emailSkipped || (item.emailDetail && item.emailDetail.indexOf('スキップ') === 0);
+    if (emailSkipped) {
       html += '<div class="hc-status" style="background:#f0f0f0;color:#999;">- メールなし（アドレス未設定）</div>';
     } else if (item.emailOk) {
       html += '<div class="hc-status ok">&#10003; メール送信OK</div>';
@@ -1486,7 +1452,7 @@ function renderHistory() {
     }
 
     // メール再送ボタン（成功時も「届いてない場合」として表示）
-    if (!item.emailSkipped && item.email) {
+    if (!emailSkipped && item.email) {
       if (item.emailOk) {
         html += '<button class="resend-btn" onclick="resendEmailFromHistory(' + idx + ')" style="background:#1a73e8;">お客様に届いてない場合: メールを再送</button>';
         html += '<div style="font-size:11px;color:#999;margin-top:4px;">※ 予約の二重登録にはなりません</div>';
@@ -1496,7 +1462,7 @@ function renderHistory() {
     }
 
     // エラー時は事務局通知済みを表示
-    if (!item.cwOk || (!item.emailOk && !item.emailSkipped)) {
+    if (!item.cwOk || (!item.emailOk && !emailSkipped)) {
       html += '<div style="font-size:12px;color:#888;margin-top:6px;padding:8px;background:#f5f5f5;border-radius:8px;">事務局に自動で通知済みです</div>';
     }
 
@@ -1508,7 +1474,7 @@ function renderHistory() {
 
 // ===== Init =====
 init();
-updateHistoryBtnVisibility();
+fetchHistory(); // APIから履歴取得してボタン件数を更新
 const savedStaff = localStorage.getItem('sokketsu_staff');
 if (savedStaff) document.getElementById('staffName').value = savedStaff;
 document.getElementById('staffName').addEventListener('blur', function() {

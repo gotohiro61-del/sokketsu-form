@@ -651,7 +651,7 @@
     </div>
 
     <!-- 履歴ボタン -->
-    <button class="history-btn" id="historyBtn" onclick="showHistory()">&#128203; 今日の送信履歴を見る</button>
+    <button class="history-btn" id="historyBtn" onclick="showHistory()">&#128203; 送信履歴を見る</button>
 
     <div id="loadError" style="display:none;background:#ffebee;color:#c62828;padding:12px 16px;border-radius:10px;font-size:14px;margin-bottom:12px;"></div>
 
@@ -781,8 +781,12 @@
   <div class="screen" id="step4">
     <div class="back-link" onclick="hideHistory()">&#8592; トップに戻る</div>
     <div class="header">
-      <h1>今日の送信履歴</h1>
+      <h1>送信履歴</h1>
       <div class="badge" id="historyCount">0件</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button id="histDays0" onclick="switchHistoryDays(0)" style="flex:1;padding:8px;border:2px solid #1a73e8;border-radius:20px;background:#e8f0fe;color:#1a73e8;font-size:13px;font-weight:700;cursor:pointer">本日</button>
+      <button id="histDays3" onclick="switchHistoryDays(3)" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:20px;background:#fff;color:#666;font-size:13px;font-weight:700;cursor:pointer">3日間</button>
     </div>
     <div id="historyList"></div>
     <button class="next-btn" onclick="hideHistory()" style="margin-top:12px;">&#65291; 新しい予約を入力する</button>
@@ -847,13 +851,37 @@ function getHistory() {
   return cachedHistory;
 }
 
+let currentHistoryDays = 0;
+
 function updateHistoryBtnVisibility() {
   const btn = document.getElementById('historyBtn');
   if (cachedHistory.items.length > 0) {
-    btn.textContent = '\u{1F4CB} 今日の送信履歴を見る（' + cachedHistory.items.length + '件）';
+    btn.textContent = '\u{1F4CB} 送信履歴を見る（' + cachedHistory.items.length + '件）';
   } else {
-    btn.textContent = '\u{1F4CB} 今日の送信履歴を見る';
+    btn.textContent = '\u{1F4CB} 送信履歴を見る';
   }
+}
+
+function switchHistoryDays(days) {
+  currentHistoryDays = days;
+  var btn0 = document.getElementById('histDays0');
+  var btn3 = document.getElementById('histDays3');
+  btn0.style.borderColor = days === 0 ? '#1a73e8' : '#e0e0e0';
+  btn0.style.background = days === 0 ? '#e8f0fe' : '#fff';
+  btn0.style.color = days === 0 ? '#1a73e8' : '#666';
+  btn3.style.borderColor = days === 3 ? '#1a73e8' : '#e0e0e0';
+  btn3.style.background = days === 3 ? '#e8f0fe' : '#fff';
+  btn3.style.color = days === 3 ? '#1a73e8' : '#666';
+  document.getElementById('historyList').innerHTML = '<div style="text-align:center;padding:40px;color:#999;">読み込み中...</div>';
+  fetch(API_URL + '?action=getHistory&days=' + days)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      cachedHistory = data;
+      renderHistory();
+    })
+    .catch(function() {
+      document.getElementById('historyList').innerHTML = '<div style="text-align:center;padding:40px;color:#c62828;">取得失敗</div>';
+    });
 }
 
 // ===== Init: GAS APIからデータ取得 =====
@@ -1425,7 +1453,13 @@ function renderHistory() {
   }
 
   let html = '';
+  let lastDate = '';
   history.items.forEach((item, idx) => {
+    // 3日間モード時は日付ヘッダーを表示
+    if (currentHistoryDays > 0 && item.date && item.date !== lastDate) {
+      lastDate = item.date;
+      html += '<div style="font-size:13px;font-weight:700;color:#1a73e8;padding:12px 0 6px;border-bottom:1px solid #e0e0e0;margin-bottom:8px">' + item.date + '</div>';
+    }
     const allOk = item.cwOk && item.emailOk;
     const allFail = !item.cwOk && !item.emailOk;
     const cardClass = allOk ? '' : (allFail ? ' all-error' : ' has-error');

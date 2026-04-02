@@ -655,6 +655,12 @@
 
     <div id="loadError" style="display:none;background:#ffebee;color:#c62828;padding:12px 16px;border-radius:10px;font-size:14px;margin-bottom:12px;"></div>
 
+    <!-- 満枠リスト -->
+    <div id="closingList" style="display:none;background:#fff0f0;border:2px solid #ef9a9a;border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+      <div style="font-size:15px;font-weight:700;color:#c62828;margin-bottom:10px;">満枠（即決で完売）</div>
+      <div id="closingItems"></div>
+    </div>
+
     <!-- 読み込み中メッセージ -->
     <div id="initialLoading" style="text-align:center;padding:60px 20px;">
       <div style="width:50px;height:50px;border:4px solid #e0e0e0;border-top:4px solid #1a73e8;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
@@ -916,6 +922,29 @@ function init() {
       document.getElementById('mainContent').style.display = 'block';
       showError('データの読み込みに失敗しました: ' + err.message);
     });
+  // 満枠リストを並行取得
+  loadClosingList();
+}
+
+function loadClosingList() {
+  fetch(API_URL + '?action=getClosingList')
+    .then(r => r.json())
+    .then(d => {
+      var closings = (d && d.closings) || [];
+      if (!closings.length) return;
+      var html = '';
+      closings.forEach(function(c, idx) {
+        if (idx > 0) html += '<div style="border-top:1px solid #ffcdd2;margin:8px 0 0;"></div>';
+        html += '<div style="padding:8px 0;">';
+        html += '<div style="font-size:15px;font-weight:700;color:#1d1d1f;">' + (c.bookingDate || '') + ' ' + (c.bookingTime || '') + ' ' + (c.bookingLevel || '') + '</div>';
+        html += '<div style="font-size:14px;color:#333;margin-top:2px;">' + (c.bookingVenue || '') + '</div>';
+        html += '<div style="font-size:11px;color:#aaa;margin-top:4px;">（登録：' + (c.closedByStaff || '') + ' ' + (c.closedDate || '') + ' ' + (c.closedAt || '') + '）</div>';
+        html += '</div>';
+      });
+      document.getElementById('closingItems').innerHTML = html;
+      document.getElementById('closingList').style.display = 'block';
+    })
+    .catch(function() {});
 }
 
 function showError(msg) {
@@ -1075,6 +1104,10 @@ function renderSlots() {
     html += '<span class="label">この枠の小計</span>';
     html += '<span class="value" id="subtotal' + i + '">-</span>';
     html += '</div></div>';
+    // 満枠チェックボックス
+    html += '<label style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;background:#fff0f0;border:2px solid #ffcdd2;border-radius:10px;font-size:14px;color:#c62828;font-weight:600;cursor:pointer;">';
+    html += '<input type="checkbox" id="isLast' + i + '" style="width:20px;height:20px;accent-color:#d32f2f;">';
+    html += '満枠（この大会の枠は終了）</label>';
     html += '</div>';
   }
   container.innerHTML = html;
@@ -1182,6 +1215,7 @@ function showConfirm() {
     html += '<div class="confirm-booking-detail">';
     html += venueVal + '<br>';
     html += timeVal + '\u301c / ' + levelVal;
+    if (document.getElementById('isLast' + i).checked) html += '<br><span style="color:#c62828;font-weight:700;font-size:13px;">満枠（この大会の枠は終了）</span>';
     html += '</div></div>';
   }
 
@@ -1249,6 +1283,13 @@ function doSend() {
     });
   }
 
+  // 満枠フラグを文字列で送る
+  var lastFlags = '';
+  for (var li = 1; li <= slotCount; li++) {
+    lastFlags += document.getElementById('isLast' + li).checked ? '1' : '0';
+  }
+  while (lastFlags.length < 5) lastFlags += '0';
+
   const enteredEmail = document.getElementById('inputEmail').value.trim();
   const formData = {
     staffName: document.getElementById('staffName').value,
@@ -1259,6 +1300,7 @@ function doSend() {
     tournamentName: currentTournament.name, venue: currentTournament.venue,
     bookings: bookings, grandTotal: grandTotal,
     remarks: (document.getElementById('remarks').value || '').trim(),
+    lastFlags: lastFlags,
   };
 
   lastFormData = formData;

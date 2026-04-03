@@ -934,11 +934,10 @@ function loadClosingList() {
       if (!closings.length) return;
       var html = '';
       closings.forEach(function(c, idx) {
-        if (idx > 0) html += '<div style="border-top:1px solid #ffcdd2;margin:8px 0 0;"></div>';
-        html += '<div style="padding:8px 0;">';
-        html += '<div style="font-size:15px;font-weight:700;color:#1d1d1f;">' + (c.bookingDate || '') + ' ' + (c.bookingTime || '') + ' ' + (c.bookingLevel || '') + '</div>';
-        html += '<div style="font-size:14px;color:#333;margin-top:2px;">' + (c.bookingVenue || '') + '</div>';
-        html += '<div style="font-size:11px;color:#aaa;margin-top:4px;">（登録：' + (c.closedByStaff || '') + ' ' + (c.closedDate || '') + ' ' + (c.closedAt || '') + '）</div>';
+        if (idx > 0) html += '<div style="border-top:1px solid #ffcdd2;margin:6px 0 0;"></div>';
+        html += '<div style="padding:6px 0;">';
+        html += '<div style="font-size:14px;font-weight:700;color:#1d1d1f;">' + (c.bookingDate || '') + ' ' + (c.bookingTime || '') + ' ' + (c.bookingLevel || '') + ' <span style="font-weight:400;font-size:11px;color:#aaa;">（' + (c.closedByStaff || '') + ' ' + (c.closedDate || '') + ' ' + (c.closedAt || '') + '）</span></div>';
+        html += '<div style="font-size:14px;font-weight:700;color:#1d1d1f;">' + (c.bookingVenue || '') + '</div>';
         html += '</div>';
       });
       document.getElementById('closingItems').innerHTML = html;
